@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vanessa's Handy Profit Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+  :root{
+    --ground:#e9ece8;
+    --panel:#f7f8f5;
+    --field:#ffffff;
+    --ink:#1d2320;
+    --muted:#5f6862;
+    --line:#cfd5cf;
+    --line-strong:#aab3ac;
+    --accent:#2f66b3;
+    --accent-ink:#ffffff;
+    --accent-soft:#dce7f5;
+    --tape:#ebc658;
+    --tape-ink:#3a2f0b;
+    --gain:#2d7a4c;
+    --loss:#b3392c;
+    --shadow:0 1px 2px rgba(29,35,32,.06),0 10px 28px rgba(29,35,32,.08);
+    --display:'Barlow Condensed','Arial Narrow',sans-serif;
+    --body:'Figtree','Segoe UI',system-ui,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#161a18; --panel:#1f2421; --field:#191d1b; --ink:#e7ebe6; --muted:#9aa49d;
+      --line:#323a35; --line-strong:#48524b; --accent:#7aa8ea; --accent-ink:#0d1726; --accent-soft:#223249;
+      --tape:#d9b64e; --tape-ink:#2a2208; --gain:#72c792; --loss:#ee8a7c;
+      --shadow:0 1px 2px rgba(0,0,0,.35),0 10px 28px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#161a18; --panel:#1f2421; --field:#191d1b; --ink:#e7ebe6; --muted:#9aa49d;
+    --line:#323a35; --line-strong:#48524b; --accent:#7aa8ea; --accent-ink:#0d1726; --accent-soft:#223249;
+    --tape:#d9b64e; --tape-ink:#2a2208; --gain:#72c792; --loss:#ee8a7c;
+    --shadow:0 1px 2px rgba(0,0,0,.35),0 10px 28px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  body{ margin:0;
+    background:var(--ground); color:var(--ink); font:15px/1.5 var(--body);
+    padding-inline:16px; padding-block:28px 64px;
+    background-image:radial-gradient(color-mix(in srgb,var(--line-strong) 45%,transparent) 1.4px,transparent 1.6px);
+    background-size:22px 22px;
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .wrap{max-width:1060px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+
+  header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+  .brand .tape{
+    display:inline-block;background:var(--tape);color:var(--tape-ink);
+    font:700 12px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;
+    padding:6px 10px 5px;transform:rotate(-1.5deg);margin-bottom:8px;
+  }
+  h1{font:800 clamp(34px,6vw,54px)/.92 var(--display);text-transform:uppercase;letter-spacing:.005em;margin:0;text-wrap:balance}
+  .reset-link{font:600 13px var(--body);color:var(--muted);background:none;border:1px solid var(--line-strong);border-radius:6px;padding:8px 12px;cursor:pointer}
+  .reset-link:hover{color:var(--loss);border-color:var(--loss)}
+
+  .rail{display:flex;gap:6px;flex-wrap:wrap;list-style:none;margin:0;padding:0}
+  .rail button{
+    font:600 12.5px/1 var(--body);letter-spacing:.04em;color:var(--muted);
+    background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:8px 12px;cursor:pointer;
+    display:flex;align-items:center;gap:6px;
+  }
+  .rail button .dot{width:7px;height:7px;border-radius:50%;background:var(--line-strong)}
+  .rail button.done .dot{background:var(--gain)}
+  .rail button.current{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .rail button.current .dot{background:var(--accent-ink)}
+
+  .layout{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:22px;align-items:start}
+  @media (max-width:820px){.layout{grid-template-columns:1fr}}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+  .question{padding:26px 26px 22px;display:flex;flex-direction:column;gap:18px;min-height:380px}
+  @media (max-width:480px){.question{padding:20px 16px}}
+  .q-count{font:600 12px/1 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .q-title{font:700 clamp(28px,4.6vw,38px)/1 var(--display);margin:6px 0 0;text-wrap:balance}
+  .q-help{color:var(--muted);margin:6px 0 0;max-width:60ch}
+  .step{display:none;flex-direction:column;gap:18px;flex:1}
+  .step.active{display:flex;animation:rise .22s ease-out}
+  @keyframes rise{from{transform:translateY(6px)}to{transform:none}}
+
+  .money{position:relative;max-width:320px}
+  .money::before{content:"$";position:absolute;left:16px;top:50%;transform:translateY(-50%);font:700 26px var(--mono);color:var(--muted)}
+  .money input{padding-left:42px}
+  input[type=number]{
+    font:700 26px/1 var(--mono);font-variant-numeric:tabular-nums;color:var(--ink);
+    background:var(--field);border:1.5px solid var(--line-strong);border-radius:10px;padding:14px 16px;width:100%;
+  }
+  input:focus-visible,button:focus-visible,summary:focus-visible,label:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+  .time-row{display:grid;grid-template-columns:repeat(2,minmax(0,170px));gap:14px}
+  .time-row label{display:flex;flex-direction:column;gap:6px;font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+  .services{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+  .service{
+    display:flex;align-items:center;gap:10px;padding:13px 14px;border:1.5px solid var(--line);border-radius:10px;
+    background:var(--field);cursor:pointer;font-weight:600;line-height:1.25
+  }
+  .service input{accent-color:var(--accent);width:17px;height:17px;margin:0;flex-shrink:0}
+  .service:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+
+  .mat-group{display:flex;flex-direction:column}
+  .mat-group h3{font:700 13px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:4px 0 6px}
+  .mat{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+  .mat:last-child{border-bottom:none}
+  .mat-name{font-weight:600;line-height:1.25}
+  .mat-name small{display:block;font-weight:400;color:var(--muted);font-size:12.5px;margin-top:2px}
+  .mat-name .badge{display:inline-block;margin-left:6px;background:var(--tape);color:var(--tape-ink);font:700 10px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;padding:3px 6px 2px;border-radius:3px;vertical-align:2px}
+  .price{position:relative;width:104px}
+  .price::before{content:"$";position:absolute;left:10px;top:50%;transform:translateY(-50%);font:500 14px var(--mono);color:var(--muted)}
+  .price input{font-size:15px;padding:9px 8px 9px 22px;border-radius:7px}
+  .unit{font:500 13px var(--mono);color:var(--muted);white-space:nowrap;text-align:right}
+  .stepper{display:flex;align-items:center;gap:4px}
+  .stepper button{width:32px;height:34px;border:1px solid var(--line-strong);background:var(--field);color:var(--ink);border-radius:7px;font:600 18px/1 var(--body);cursor:pointer}
+  .stepper button:hover{border-color:var(--accent);color:var(--accent)}
+  .stepper output{min-width:48px;text-align:center;font:700 15px var(--mono);font-variant-numeric:tabular-nums}
+  @media (max-width:520px){
+    .mat{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"n n" "p s"}
+    .mat-name{grid-area:n}.mat .price,.mat .unit{grid-area:p;justify-self:start}.mat .stepper{grid-area:s}
+  }
+
+  details.dropdown{border:1.5px solid var(--line-strong);border-radius:10px;background:var(--field)}
+  details.dropdown summary{list-style:none;cursor:pointer;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:600}
+  details.dropdown summary::-webkit-details-marker{display:none}
+  details.dropdown summary::after{content:"";width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg) translateY(-3px);transition:transform .15s}
+  details.dropdown[open] summary::after{transform:rotate(-135deg)}
+  details.dropdown[open] summary{border-bottom:1px solid var(--line)}
+  .tool-list{display:flex;flex-direction:column;padding:6px}
+  .tool{display:flex;align-items:center;gap:10px;padding:10px;border-radius:7px;cursor:pointer}
+  .tool:hover{background:var(--accent-soft)}
+  .tool input{accent-color:var(--accent);width:17px;height:17px;margin:0}
+  .tool span{flex:1}
+  .tool .fee{flex:0;font:500 13px var(--mono);color:var(--muted)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{background:var(--accent-soft);color:var(--ink);border-radius:999px;padding:5px 10px;font-size:13px;font-weight:600}
+
+  .nav{display:flex;justify-content:space-between;gap:10px;margin-top:auto;padding-top:6px}
+  .btn{font:700 15px/1 var(--body);border-radius:9px;padding:13px 20px;cursor:pointer;border:1.5px solid var(--line-strong);background:var(--field);color:var(--ink)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .btn.primary:hover{filter:brightness(1.07)}
+  .btn[hidden]{display:none}
+  .hint-key{font-size:12.5px;color:var(--muted);align-self:center}
+
+  .result-big{display:flex;flex-direction:column;gap:4px;padding:18px 20px;border-radius:10px;background:var(--field);border:1.5px solid var(--line)}
+  .result-big .lbl{font:700 14px var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .result-big .num{font:700 clamp(40px,8vw,58px)/1 var(--mono);font-variant-numeric:tabular-nums}
+  .result-big .sub{font:500 13px var(--mono);color:var(--muted)}
+  .gain{color:var(--gain)} .loss{color:var(--loss)}
+
+  /* receipt */
+  .receipt{padding:20px 20px 16px;position:sticky;top:16px;font-size:14px}
+  .receipt::before{
+    content:"";position:absolute;left:50%;top:-10px;width:92px;height:22px;transform:translateX(-50%) rotate(2deg);
+    background:color-mix(in srgb,var(--tape) 85%,transparent);
+  }
+  @media (max-width:820px){.receipt{position:relative;top:0}}
+  .r-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:8px}
+  .r-head h2{font:800 22px/1 var(--display);text-transform:uppercase;margin:0}
+  .r-head span{font:500 12px var(--mono);color:var(--muted)}
+  .r-service{font-weight:600;margin:4px 0 10px;min-height:1.5em}
+  .r-row{display:flex;justify-content:space-between;gap:12px;padding:5px 0}
+  .r-row .k{color:var(--muted)}
+  .r-row .v{font:500 14px var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .r-row.sub{padding:2px 0 2px 14px;font-size:13px}
+  .r-row.sub .v{font-size:12.5px}
+  .r-row.total{border-top:1px dashed var(--line-strong);margin-top:6px;padding-top:9px;font-weight:600}
+  .r-profit{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:2px solid var(--ink);margin-top:10px;padding-top:12px}
+  .r-profit .k{font:800 18px/1 var(--display);text-transform:uppercase;letter-spacing:.04em}
+  .r-profit .v{font:700 26px/1 var(--mono);font-variant-numeric:tabular-nums}
+  .r-margin{text-align:right;font:500 12px var(--mono);color:var(--muted);margin-top:4px}
+  .copy-row{display:flex;gap:8px;flex-wrap:wrap}
+  .toast{font-size:13px;color:var(--gain);font-weight:600;align-self:center}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <span class="tape">Job ticket</span>
+      <h1>Vanessa's Handy<br>Profit Calculator</h1>
+    </div>
+    <button type="button" class="reset-link" id="resetBtn">Start a new job</button>
+  </header>
+
+  <ol class="rail" id="rail"></ol>
+
+  <div class="layout">
+    <section class="card question" aria-live="polite">
+
+      <div class="step" data-step="0" data-name="Job">
+        <div><div class="q-count">Question 1 of 7</div><h2 class="q-title">What job did you do?</h2>
+        <p class="q-help">Materials usually needed for this job are marked on the materials step.</p></div>
+        <div class="services" id="services"></div>
+      </div>
+
+      <div class="step" data-step="1" data-name="Paid">
+        <div><div class="q-count">Question 2 of 7</div><h2 class="q-title">How much did you get paid?</h2>
+        <p class="q-help">The full amount the client paid, before any discount.</p></div>
+        <div class="money"><input type="number" id="paid" min="0" step="0.01" inputmode="decimal" placeholder="0.00" aria-label="Amount paid"></div>
+      </div>
+
+      <div class="step" data-step="2" data-name="Discount">
+        <div><div class="q-count">Question 3 of 7</div><h2 class="q-title">Discount offered to client?</h2>
+        <p class="q-help">Leave it at 0 if you didn't give one.</p></div>
+        <div class="money"><input type="number" id="discount" min="0" step="0.01" inputmode="decimal" placeholder="0.00" aria-label="Discount offered"></div>
+      </div>
+
+      <div class="step" data-step="3" data-name="Materials">
+        <div><div class="q-count">Question 4 of 7</div><h2 class="q-title">Which materials did you use?</h2>
+        <p class="q-help">Tap + for each one you used. Sealant, paint and grout go up by quarters (0.25). Type in the price for paint, door hardware and backsplash.</p></div>
+        <div id="materials" style="display:flex;flex-direction:column;gap:14px"></div>
+      </div>
+
+      <div class="step" data-step="4" data-name="Tools">
+        <div><div class="q-count">Question 5 of 7</div><h2 class="q-title">Which tools did you use?</h2>
+        <p class="q-help">Each tool costs $0.10 per job for wear and tear.</p></div>
+        <details class="dropdown" id="toolsDrop">
+          <summary><span id="toolsSummary">Select tools</span></summary>
+          <div class="tool-list" id="tools"></div>
+        </details>
+        <div class="chips" id="toolChips"></div>
+      </div>
+
+      <div class="step" data-step="5" data-name="Time">
+        <div><div class="q-count">Question 6 of 7</div><h2 class="q-title">How long did it take?</h2></div>
+        <div class="time-row">
+          <label for="hours">Hours<input type="number" id="hours" min="0" step="1" inputmode="numeric" placeholder="0"></label>
+          <label for="minutes">Minutes<input type="number" id="minutes" min="0" max="59" step="5" inputmode="numeric" placeholder="0"></label>
+        </div>
+      </div>
+
+      <div class="step" data-step="6" data-name="Rate">
+        <div><div class="q-count">Question 7 of 7</div><h2 class="q-title">Hourly rate to subtract?</h2>
+        <p class="q-help">Set to $30/hour. Change it if this job was different.</p></div>
+        <div class="money"><input type="number" id="rate" min="0" step="0.5" inputmode="decimal" value="30" aria-label="Hourly rate"></div>
+      </div>
+
+      <div class="step" data-step="7" data-name="Profit">
+        <div><div class="q-count">Done</div><h2 class="q-title" id="resultTitle">Your profit on this job</h2></div>
+        <div class="result-big">
+          <span class="lbl">Net profit</span>
+          <span class="num" id="bigProfit">$0.00</span>
+          <span class="sub" id="bigMargin">margin 0.0%</span>
+        </div>
+        <div class="copy-row">
+          <button type="button" class="btn" id="copyBtn">Copy summary</button>
+          <button type="button" class="btn primary" id="newBtn">Start a new job</button>
+          <span class="toast" id="toast" hidden>Copied</span>
+        </div>
+      </div>
+
+      <div class="nav">
+        <button type="button" class="btn" id="backBtn">Back</button>
+        <span class="hint-key" id="enterHint">Press Enter to continue</span>
+        <button type="button" class="btn primary" id="nextBtn">Next</button>
+      </div>
+    </section>
+
+    <aside class="card receipt" aria-label="Running total">
+      <div class="r-head"><h2>Running total</h2><span id="rDate"></span></div>
+      <div class="r-service" id="rService">No job selected yet</div>
+      <div class="r-row"><span class="k">Amount paid</span><span class="v" id="rPaid">$0.00</span></div>
+      <div class="r-row"><span class="k">− Discount</span><span class="v" id="rDiscount">$0.00</span></div>
+      <div class="r-row total"><span class="k">Net revenue</span><span class="v" id="rRevenue">$0.00</span></div>
+      <div class="r-row"><span class="k">− Materials</span><span class="v" id="rMaterials">$0.00</span></div>
+      <div id="rMatLines"></div>
+      <div class="r-row"><span class="k">− Tools</span><span class="v" id="rTools">$0.00</span></div>
+      <div id="rToolLines"></div>
+      <div class="r-row"><span class="k" id="rLaborK">− Labor</span><span class="v" id="rLabor">$0.00</span></div>
+      <div class="r-profit"><span class="k">Profit</span><span class="v gain" id="rProfit">$0.00</span></div>
+      <div class="r-margin" id="rMargin">margin 0.0%</div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(function(){
+  var SERVICES = [
+    {id:'paintingWood', name:'Hanging a painting on wood', uses:['screwsWood']},
+    {id:'paintingDrywall', name:'Hanging a painting on drywall', uses:['anchors','screwsDrywall']},
+    {id:'caulkTub', name:'Recaulking a bathtub', uses:['sealant']},
+    {id:'caulkShower', name:'Recaulking a shower', uses:['sealant']},
+    {id:'caulkSink', name:'Recaulking a sink', uses:['sealant']},
+    {id:'paintRoom', name:'Painting a room', uses:['paint','tray','brush','tape','roller']},
+    {id:'doorknob', name:'Installing a doorknob / door handle', uses:['doorHandle']},
+    {id:'doorknobLock', name:'Installing a doorknob / handle with a safelock', uses:['doorHandle']},
+    {id:'backsplash', name:'Removing & redoing a kitchen backsplash', uses:['backsplash','grout']}
+  ];
+
+  // manual: price typed in. step: quantity increment.
+  var MATERIALS = [
+    {id:'anchors', name:'Drywall anchors', price:0.384, step:1, group:'Hanging'},
+    {id:'screwsDrywall', name:'Zinc-plated screws', note:'for drywall', price:0.0668, step:1, group:'Hanging'},
+    {id:'screwsWood', name:'Zinc-plated screws', note:'for wood', price:0.0958, step:1, group:'Hanging'},
+    {id:'sealant', name:'Silicone Premium Sealant', price:19.92, step:0.25, group:'Caulking'},
+    {id:'paint', name:'Paint', note:'price per gallon — type it in', manual:true, step:0.25, group:'Painting', unitWord:'gal'},
+    {id:'tray', name:'Paint roller tray', price:13.67, step:1, group:'Painting'},
+    {id:'brush', name:'Paint brush', price:3.12, step:1, group:'Painting'},
+    {id:'tape', name:'Packaging tape', price:5.17, step:1, group:'Painting'},
+    {id:'roller', name:'10 ft paint roller', price:16.37, step:1, group:'Painting'},
+    {id:'doorHandle', name:'Padlock / door handle', note:'type in what it cost', manual:true, step:1, group:'Door hardware'},
+    {id:'backsplash', name:'Backsplash', note:'type in what it cost', manual:true, step:1, group:'Backsplash'},
+    {id:'grout', name:'6 lb grout', price:32.46, step:0.25, group:'Backsplash'}
+  ];
+
+  var TOOL_FEE = 0.10;
+  var TOOLS = [
+    {id:'hammer', name:'Hammer'},
+    {id:'studFinder', name:'Stud finder'},
+    {id:'screwdrivers', name:'Screwdrivers'},
+    {id:'drill', name:'Drill'},
+    {id:'knife', name:'Utility knife'},
+    {id:'vinegar', name:'Baking powder & white vinegar mix'},
+    {id:'mask', name:'Mask'},
+    {id:'gear', name:'Protective gear (goggles, mask)'}
+  ];
+
+  var $ = function(id){ return document.getElementById(id); };
+  var qty = {}; MATERIALS.forEach(function(m){ qty[m.id] = 0; });
+  var current = 0;
+  var steps = [].slice.call(document.querySelectorAll('.step'));
+  var LAST = steps.length - 1;
+
+  function fmt(n){ return (n < 0 ? '-$' : '$') + Math.abs(n).toFixed(2); }
+  function num(id){ var v = parseFloat($(id).value); return isFinite(v) ? v : 0; }
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+  // services
+  $('services').innerHTML = SERVICES.map(function(s){
+    return '<label class="service"><input type="radio" name="service" id="svc_' + s.id + '" value="' + s.id + '"><span>' + esc(s.name) + '</span></label>';
+  }).join('');
+
+  function selectedService(){
+    var el = document.querySelector('input[name=service]:checked');
+    return el ? SERVICES.filter(function(s){ return s.id === el.value; })[0] : null;
+  }
+
+  // materials
+  function renderMaterials(){
+    var svc = selectedService();
+    var uses = svc ? svc.uses : [];
+    var groups = [];
+    MATERIALS.forEach(function(m){ if(groups.indexOf(m.group) < 0) groups.push(m.group); });
+    // groups containing suggested materials go first
+    groups.sort(function(a,b){
+      var ha = MATERIALS.some(function(m){ return m.group===a && uses.indexOf(m.id)>=0; });
+      var hb = MATERIALS.some(function(m){ return m.group===b && uses.indexOf(m.id)>=0; });
+      return (hb?1:0) - (ha?1:0);
+    });
+    var prices = {};
+    MATERIALS.forEach(function(m){ if(m.manual && $('price_'+m.id)) prices[m.id] = $('price_'+m.id).value; });
+    $('materials').innerHTML = groups.map(function(g){
+      return '<div class="mat-group"><h3>' + esc(g) + '</h3>' + MATERIALS.filter(function(m){ return m.group===g; }).map(function(m){
+        var badge = uses.indexOf(m.id) >= 0 ? '<span class="badge">Usual for this job</span>' : '';
+        var priceCell = m.manual
+          ? '<div class="price"><input type="number" id="price_' + m.id + '" min="0" step="0.01" inputmode="decimal" placeholder="0.00" aria-label="' + esc(m.name) + ' price" value="' + esc(prices[m.id] || '') + '"></div>'
+          : '<div class="unit">$' + m.price + ' ea</div>';
+        return '<div class="mat"><div class="mat-name">' + esc(m.name) + badge + (m.note ? '<small>' + esc(m.note) + '</small>' : '') + '</div>' + priceCell +
+          '<div class="stepper"><button type="button" data-dec="' + m.id + '" aria-label="Less ' + esc(m.name) + '">−</button>' +
+          '<output id="qty_' + m.id + '">' + qty[m.id] + '</output>' +
+          '<button type="button" data-inc="' + m.id + '" aria-label="More ' + esc(m.name) + '">+</button></div></div>';
+      }).join('') + '</div>';
+    }).join('');
+  }
+
+  $('materials').addEventListener('click', function(e){
+    var b = e.target.closest('button'); if(!b) return;
+    var id = b.getAttribute('data-inc') || b.getAttribute('data-dec');
+    var m = MATERIALS.filter(function(x){ return x.id === id; })[0]; if(!m) return;
+    var v = qty[id] + (b.hasAttribute('data-inc') ? m.step : -m.step);
+    qty[id] = Math.max(0, Math.round(v * 100) / 100);
+    $('qty_' + id).textContent = qty[id];
+    recalc();
+  });
+
+  // tools dropdown
+  $('tools').innerHTML = TOOLS.map(function(t){
+    return '<label class="tool"><input type="checkbox" id="tool_' + t.id + '"><span>' + esc(t.name) + '</span><span class="fee">+$0.10</span></label>';
+  }).join('');
+  function selectedTools(){ return TOOLS.filter(function(t){ return $('tool_' + t.id).checked; }); }
+
+  function recalc(){
+    var svc = selectedService();
+    var paid = num('paid'), discount = num('discount');
+    var revenue = paid - discount;
+
+    var matLines = [], materialsCost = 0;
+    MATERIALS.forEach(function(m){
+      if(!qty[m.id]) return;
+      var price = m.manual ? num('price_' + m.id) : m.price;
+      var cost = price * qty[m.id];
+      materialsCost += cost;
+      matLines.push('<div class="r-row sub"><span class="k">' + esc(m.name) + (m.note && !m.manual ? ' (' + esc(m.note) + ')' : '') + ' × ' + qty[m.id] + '</span><span class="v">' + fmt(-cost) + '</span></div>');
+    });
+
+    var tools = selectedTools();
+    var toolsCost = tools.length * TOOL_FEE;
+    var hours = num('hours'), minutes = num('minutes'), rate = num('rate');
+    var laborCost = (hours + minutes / 60) * rate;
+    var profit = revenue - materialsCost - toolsCost - laborCost;
+    var margin = revenue > 0 ? profit / revenue * 100 : 0;
+    var cls = profit >= 0 ? 'gain' : 'loss';
+
+    $('rService').textContent = svc ? svc.name : 'No job selected yet';
+    $('rPaid').textContent = fmt(paid);
+    $('rDiscount').textContent = fmt(-discount);
+    $('rRevenue').textContent = fmt(revenue);
+    $('rMaterials').textContent = fmt(-materialsCost);
+    $('rMatLines').innerHTML = matLines.join('');
+    $('rTools').textContent = fmt(-toolsCost);
+    $('rToolLines').innerHTML = tools.length ? '<div class="r-row sub"><span class="k">' + tools.map(function(t){ return esc(t.name); }).join(', ') + '</span><span class="v"></span></div>' : '';
+    $('rLaborK').textContent = '− Labor (' + hours + 'h ' + minutes + 'm × ' + fmt(rate) + '/h)';
+    $('rLabor').textContent = fmt(-laborCost);
+    $('rProfit').textContent = fmt(profit); $('rProfit').className = 'v ' + cls;
+    $('rMargin').textContent = 'margin ' + margin.toFixed(1) + '%';
+
+    $('bigProfit').textContent = fmt(profit); $('bigProfit').className = 'num ' + cls;
+    $('bigMargin').textContent = 'margin ' + margin.toFixed(1) + '% of ' + fmt(revenue) + ' net revenue';
+    $('resultTitle').textContent = profit >= 0 ? 'You made a profit on this job' : 'This job lost money';
+
+    $('toolsSummary').textContent = tools.length ? tools.length + ' tool' + (tools.length > 1 ? 's' : '') + ' selected · ' + fmt(toolsCost) : 'Select tools';
+    $('toolChips').innerHTML = tools.map(function(t){ return '<span class="chip">' + esc(t.name) + '</span>'; }).join('');
+
+    return {svc:svc, paid:paid, discount:discount, revenue:revenue, materialsCost:materialsCost, tools:tools, toolsCost:toolsCost, hours:hours, minutes:minutes, rate:rate, laborCost:laborCost, profit:profit, margin:margin};
+  }
+
+  // rail + navigation
+  function renderRail(){
+    $('rail').innerHTML = steps.map(function(s, i){
+      var state = i === current ? 'current' : (i < current ? 'done' : '');
+      return '<li><button type="button" class="' + state + '" data-go="' + i + '"' + (i === current ? ' aria-current="step"' : '') + '><span class="dot"></span>' + s.getAttribute('data-name') + '</button></li>';
+    }).join('');
+  }
+  $('rail').addEventListener('click', function(e){
+    var b = e.target.closest('button[data-go]'); if(b) go(+b.getAttribute('data-go'));
+  });
+
+  function go(i){
+    if(i > 0 && !selectedService()){ i = 0; flashServices(); }
+    current = Math.max(0, Math.min(LAST, i));
+    if(current === 3) renderMaterials();
+    steps.forEach(function(s, k){ s.classList.toggle('active', k === current); });
+    $('backBtn').style.visibility = current === 0 ? 'hidden' : 'visible';
+    $('nextBtn').hidden = current === LAST;
+    $('enterHint').hidden = current === LAST;
+    $('nextBtn').textContent = current === LAST - 1 ? 'See my profit' : 'Next';
+    renderRail(); recalc();
+    var focusEl = steps[current].querySelector('input[type=number], input[type=radio]:checked, input[type=radio]');
+    if(focusEl && current !== 3) focusEl.focus({preventScroll:true});
+  }
+  function flashServices(){
+    var el = $('services'); el.style.outline = '2px solid var(--loss)'; el.style.outlineOffset = '6px'; el.style.borderRadius = '10px';
+    setTimeout(function(){ el.style.outline = ''; }, 1200);
+  }
+
+  $('nextBtn').addEventListener('click', function(){ go(current + 1); });
+  $('backBtn').addEventListener('click', function(){ go(current - 1); });
+  $('services').addEventListener('change', function(){ recalc(); setTimeout(function(){ go(1); }, 180); });
+  document.addEventListener('input', recalc);
+  document.addEventListener('change', function(e){ if(e.target.closest('#tools')) recalc(); });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Enter' && !e.target.closest('button, summary') && current < LAST){ e.preventDefault(); go(current + 1); }
+  });
+
+  function reset(){
+    document.querySelectorAll('input[name=service]').forEach(function(r){ r.checked = false; });
+    ['paid','discount','hours','minutes'].forEach(function(id){ $(id).value = ''; });
+    $('rate').value = 30;
+    MATERIALS.forEach(function(m){ qty[m.id] = 0; var p = $('price_' + m.id); if(p) p.value = ''; });
+    TOOLS.forEach(function(t){ $('tool_' + t.id).checked = false; });
+    $('toolsDrop').open = false;
+    go(0);
+  }
+  $('resetBtn').addEventListener('click', reset);
+  $('newBtn').addEventListener('click', reset);
+
+  $('copyBtn').addEventListener('click', function(){
+    var j = recalc();
+    var lines = [
+      "Vanessa's Handy — " + (j.svc ? j.svc.name : 'Job') + ' (' + new Date().toLocaleDateString() + ')',
+      'Paid: ' + fmt(j.paid), 'Discount: ' + fmt(-j.discount), 'Materials: ' + fmt(-j.materialsCost),
+      'Tools: ' + fmt(-j.toolsCost) + (j.tools.length ? ' (' + j.tools.map(function(t){ return t.name; }).join(', ') + ')' : ''),
+      'Labor: ' + fmt(-j.laborCost) + ' (' + j.hours + 'h ' + j.minutes + 'm @ ' + fmt(j.rate) + '/h)',
+      'PROFIT: ' + fmt(j.profit) + ' (margin ' + j.margin.toFixed(1) + '%)'
+    ].join('\n');
+    var done = function(){ $('toast').hidden = false; setTimeout(function(){ $('toast').hidden = true; }, 1600); };
+    if(navigator.clipboard) navigator.clipboard.writeText(lines).then(done, function(){});
+  });
+
+  $('rDate').textContent = new Date().toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'});
+  go(0);
+})();
+</script>
+</body>
+</html>
